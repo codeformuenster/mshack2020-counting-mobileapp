@@ -27,6 +27,7 @@ dependencies:
   http: ^0.12.2
   muensterZaehltDartOpenapi:
     git: https://github.com/codeformuenster/mshack2020-counting-dart-openapi.git
+  flutter_map: any
 
 
   # The following adds the Cupertino Icons font to your application.

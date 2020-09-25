@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:muensterZaehltDartOpenapi/api.dart';
+import 'package:latlong/latlong.dart';
 
 /// Creates instance of [Dio] to be used in the remote layer of the app.
 Dio createDio(BaseOptions baseConfiguration) {
@@ -168,109 +170,139 @@ class _MyHomePageState extends State<MyHomePage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: GridView.count(
-        crossAxisCount: 2,
-        padding: EdgeInsets.all(16.0),
-        childAspectRatio: 8.0 / 9.0,
-        children: <Widget>[
-          GestureDetector(
-            onTap: () {
-              _incrementFullCounter();
-              _getPosition()
-                  .then((value) =>
-                      _postCount(value.longitude, value.latitude, 1)
-                          .then((value) => print(value.data)))
-                  .catchError((e) {
-                print("Got error: ${e.error}");
-                return 1;
-              });
-            },
-            child: Card(
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text('Alles voll hier'),
-                          SizedBox(height: 8.0),
-                          Center(
-                              child: Column(
-                            children: [
-                              Text(
-                                '💩',
-                                style: TextStyle(fontSize: 82),
-                              ),
-                              Text("Vollzähler"),
-                              Text(
-                                '$_fullcounter',
-                              ),
-                            ],
-                          )),
-                        ],
-                      ),
-                    ),
-                  ],
-                )),
+    return DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            // Here we take the value from the MyHomePage object that was created by
+            // the App.build method, and use it to set our appbar title.
+            title: Text(widget.title),
+            bottom: TabBar(
+              tabs: [
+                Tab(icon: Icon(Icons.add_to_photos)),
+                Tab(icon: Icon(Icons.map)),
+              ],
+            ),
           ),
-          GestureDetector(
-              onTap: () {
-                _incrementEmptyCounter();
-                _getPosition()
-                    .then((value) =>
-                        _postCount(value.longitude, value.latitude, 0)
-                            .then((value) => print(value.data)))
-                    .catchError((e) {
-                  print("Got error: ${e.error}");
-                  return 1;
-                });
-              },
-              child: Card(
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+          body: TabBarView(
+            physics: NeverScrollableScrollPhysics(),
+            children: [
+              GridView.count(
+                crossAxisCount: 2,
+                padding: EdgeInsets.all(16.0),
+                childAspectRatio: 8.0 / 9.0,
+                children: <Widget>[
+                  GestureDetector(
+                    onTap: () {
+                      _incrementFullCounter();
+                      _getPosition()
+                          .then((value) =>
+                              _postCount(value.longitude, value.latitude, 1)
+                                  .then((value) => print(value.data)))
+                          .catchError((e) {
+                        print("Got error: ${e.error}");
+                        return 1;
+                      });
+                    },
+                    child: Card(
+                        clipBehavior: Clip.antiAlias,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Text('Alles OK'),
-                            SizedBox(height: 8.0),
-                            Center(
-                                child: Column(
-                              children: [
-                                Text(
-                                  '😎',
-                                  style: TextStyle(fontSize: 82),
-                                ),
-                                Text("Leerzähler"),
-                                Text(
-                                  '$_emptycounter',
-                                ),
-                              ],
-                            )),
+                            Padding(
+                              padding:
+                                  EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text('Alles voll hier'),
+                                  SizedBox(height: 8.0),
+                                  Center(
+                                      child: Column(
+                                    children: [
+                                      Text(
+                                        '💩',
+                                        style: TextStyle(fontSize: 82),
+                                      ),
+                                      Text("Vollzähler"),
+                                      Text(
+                                        '$_fullcounter',
+                                      ),
+                                    ],
+                                  )),
+                                ],
+                              ),
+                            ),
                           ],
-                        ),
-                      ),
-                    ],
-                  ))),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementFullCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+                        )),
+                  ),
+                  GestureDetector(
+                      onTap: () {
+                        _incrementEmptyCounter();
+                        _getPosition()
+                            .then((value) =>
+                                _postCount(value.longitude, value.latitude, 0)
+                                    .then((value) => print(value.data)))
+                            .catchError((e) {
+                          print("Got error: ${e.error}");
+                          return 1;
+                        });
+                      },
+                      child: Card(
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Padding(
+                                padding:
+                                    EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text('Alles OK'),
+                                    SizedBox(height: 8.0),
+                                    Center(
+                                        child: Column(
+                                      children: [
+                                        Text(
+                                          '😎',
+                                          style: TextStyle(fontSize: 82),
+                                        ),
+                                        Text("Leerzähler"),
+                                        Text(
+                                          '$_emptycounter',
+                                        ),
+                                      ],
+                                    )),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ))),
+                ],
+              ),
+              FlutterMap(
+                options: new MapOptions(
+                  center: new LatLng(51.9521213, 7.6404818),
+                  zoom: 13.0,
+                ),
+                layers: [
+                  new TileLayerOptions(
+                      urlTemplate:
+                          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                      subdomains: ['a', 'b', 'c']),
+                  new MarkerLayerOptions(
+                    markers: [],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // floatingActionButton: FloatingActionButton(
+          //   onPressed: _incrementFullCounter,
+          //   tooltip: 'Increment',
+          //   child: Icon(Icons.add),
+          // ),
+        ));
   }
 }
