@@ -1,9 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:dio/dio.dart';
+import 'package:muensterZaehltDartOpenapi/api.dart';
+
+/// Creates instance of [Dio] to be used in the remote layer of the app.
+Dio createDio(BaseOptions baseConfiguration) {
+  var dio = Dio(baseConfiguration);
+  dio.interceptors.addAll([
+    // interceptor to retry failed requests
+    // interceptor to add bearer token to requests
+    // interceptor to refresh access tokens
+    // interceptor to log requests/responses
+    // etc.
+  ]);
+
+  return dio;
+}
+
+/// Creates Dio Options for initializing a Dio client.
+///
+/// [baseUrl] Base url for the configuration
+/// [connectionTimeout] Timeout when sending data
+/// [connectionReadTimeout] Timeout when receiving data
+BaseOptions createDioOptions(
+    String baseUrl, int connectionTimeout, int connectionReadTimeout) {
+  return BaseOptions(
+    baseUrl: baseUrl,
+    connectTimeout: connectionTimeout,
+    receiveTimeout: connectionReadTimeout,
+  );
+}
+
+/// Creates an instance of the backend API with default options.
+MuensterZaehltDartOpenapi createMyApi() {
+  const baseUrl = 'https://counting-backend.codeformuenster.org';
+  final options = createDioOptions(baseUrl, 10000, 10000);
+  final dio = createDio(options);
+  return MuensterZaehltDartOpenapi(dio: dio);
+}
 
 void main() {
   runApp(MuensterZaehltApp());
 }
+
+// DefaultApi createAPI() {
+//   const baseUrl = 'https://counting-backend.codeformuenster.org/';
+//   ApiClient apiClient = ApiClient(basePath: baseUrl);
+//   DefaultApi defaultApi = DefaultApi(apiClient);
+//   return defaultApi;
+// }
 
 class MuensterZaehltApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -53,6 +98,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _fullcounter = 0;
   int _emptycounter = 0;
+  MuensterZaehltDartOpenapi api = createMyApi();
 
   void _incrementFullCounter() {
     setState(() {
@@ -65,14 +111,14 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  Future<void> _getPosition() async {
+  Future<Position> _getPosition() async {
     LocationPermission permission = await checkPermission();
 
     if (permission == LocationPermission.denied) {
       permission = await requestPermission();
     } else if (permission == LocationPermission.deniedForever) {
       print("Location denied forever");
-      return;
+      return null;
     }
 
     if (permission == LocationPermission.whileInUse ||
@@ -80,9 +126,27 @@ class _MyHomePageState extends State<MyHomePage> {
       Position position =
           await getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       print(position);
+      return position;
     } else {
       print("Location denied");
+      return null;
     }
+  }
+
+  Future<Response<Object>> _postCount(
+      double long, double lat, int count) async {
+    Response<Object> response = await api.dio.post("/counts/", data: {
+      "long": long,
+      "lat": lat,
+      "count": count,
+      "timestamp": DateTime.now().toIso8601String()
+    });
+    return response;
+  }
+
+  Future<Response<Object>> _readCountIds() async {
+    Response<Object> response = await api.dio.get("/counts");
+    return response;
   }
 
   void _incrementEmptyCounter() {
@@ -118,7 +182,14 @@ class _MyHomePageState extends State<MyHomePage> {
           GestureDetector(
             onTap: () {
               _incrementFullCounter();
-              _getPosition();
+              _getPosition()
+                  .then((value) =>
+                      _postCount(value.longitude, value.latitude, 1)
+                          .then((value) => print(value.data)))
+                  .catchError((e) {
+                print("Got error: ${e.error}");
+                return 1;
+              });
             },
             child: Card(
                 clipBehavior: Clip.antiAlias,
@@ -154,6 +225,14 @@ class _MyHomePageState extends State<MyHomePage> {
           GestureDetector(
               onTap: () {
                 _incrementEmptyCounter();
+                _getPosition()
+                    .then((value) =>
+                        _postCount(value.longitude, value.latitude, 0)
+                            .then((value) => print(value.data)))
+                    .catchError((e) {
+                  print("Got error: ${e.error}");
+                  return 1;
+                });
               },
               child: Card(
                   clipBehavior: Clip.antiAlias,
