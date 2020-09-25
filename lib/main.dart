@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 void main() {
   runApp(MuensterZaehltApp());
@@ -64,6 +65,26 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  Future<void> _getPosition() async {
+    LocationPermission permission = await checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await requestPermission();
+    } else if (permission == LocationPermission.deniedForever) {
+      print("Location denied forever");
+      return;
+    }
+
+    if (permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always) {
+      Position position =
+          await getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      print(position);
+    } else {
+      print("Location denied");
+    }
+  }
+
   void _incrementEmptyCounter() {
     setState(() {
       // This call to setState tells the Flutter framework that something has
@@ -97,6 +118,7 @@ class _MyHomePageState extends State<MyHomePage> {
           GestureDetector(
             onTap: () {
               _incrementFullCounter();
+              _getPosition();
             },
             child: Card(
                 clipBehavior: Clip.antiAlias,
