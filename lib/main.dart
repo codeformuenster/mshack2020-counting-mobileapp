@@ -50,16 +50,28 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  int _fullcounter = 0;
+  int _emptycounter = 0;
 
-  void _incrementCounter() {
+  void _incrementFullCounter() {
     setState(() {
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
       // so that the display can reflect the updated values. If we changed
       // _counter without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
-      _counter++;
+      _fullcounter++;
+    });
+  }
+
+  void _incrementEmptyCounter() {
+    setState(() {
+      // This call to setState tells the Flutter framework that something has
+      // changed in this State, which causes it to rerun the build method below
+      // so that the display can reflect the updated values. If we changed
+      // _counter without calling setState(), then the build method would not be
+      // called again, and so nothing would appear to happen.
+      _emptycounter++;
     });
   }
 
@@ -77,38 +89,84 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'So oft hast du geschmust:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
+      body: GridView.count(
+        crossAxisCount: 2,
+        padding: EdgeInsets.all(16.0),
+        childAspectRatio: 8.0 / 9.0,
+        children: <Widget>[
+          GestureDetector(
+            onTap: () {
+              _incrementFullCounter();
+            },
+            child: Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text('Alles voll hier'),
+                          SizedBox(height: 8.0),
+                          Center(
+                              child: Column(
+                            children: [
+                              Text(
+                                '💩',
+                                style: TextStyle(fontSize: 82),
+                              ),
+                              Text("Vollzähler"),
+                              Text(
+                                '$_fullcounter',
+                              ),
+                            ],
+                          )),
+                        ],
+                      ),
+                    ),
+                  ],
+                )),
+          ),
+          GestureDetector(
+              onTap: () {
+                _incrementEmptyCounter();
+              },
+              child: Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text('Alles OK'),
+                            SizedBox(height: 8.0),
+                            Center(
+                                child: Column(
+                              children: [
+                                Text(
+                                  '😎',
+                                  style: TextStyle(fontSize: 82),
+                                ),
+                                Text("Leerzähler"),
+                                Text(
+                                  '$_emptycounter',
+                                ),
+                              ],
+                            )),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ))),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: _incrementFullCounter,
         tooltip: 'Increment',
         child: Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
