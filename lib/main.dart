@@ -120,12 +120,44 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       vsync: this,
     );
     _tabController = TabController(vsync: this, length: 2);
+
+    mapController.onReady.then((value) => initMarkers());
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void initMarkers() {
+    api.dio
+        .get("/counts?only_latest=true")
+        .then((value) => {putMarkers(value)});
+  }
+
+  void putMarkers(data) {
+    print(data);
+    data.data.forEach((k, count) => {
+          if (count.containsKey("data"))
+            {
+              if (count["data"] != null &&
+                  count["data"].containsKey("longitude") &&
+                  count["data"]["longitude"] != null &&
+                  count["data"]["longitude"] is double)
+                {
+                  markerLayerOptions.markers.add(new Marker(
+                    width: 32.0,
+                    height: 32.0,
+                    point: new LatLng(
+                        count["data"]["latitude"], count["data"]["longitude"]),
+                    builder: (ctx) => new Container(
+                      child: new Image.asset("assets/muensterhack_logo.png"),
+                    ),
+                  ))
+                }
+            }
+        });
   }
 
   void newMarker(Position position) {
