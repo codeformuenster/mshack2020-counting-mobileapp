@@ -100,14 +100,17 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
-  List<double> _imageOpacity = [1.0, 1.0];
-  List<bool> _timerVisible = [false, false];
+  List<double> _imageOpacity = [1.0, 1.0, 1.0];
+  List<bool> _timerVisible = [false, false, false];
   double _progress = 0;
   Timer timer;
   MuensterZaehltDartOpenapi api = createMyApi();
   MapController mapController = new MapController();
   AnimationController animationController;
   TabController _tabController;
+  MarkerLayerOptions markerLayerOptions = new MarkerLayerOptions(
+    markers: [],
+  );
 
   @override
   void initState() {
@@ -123,6 +126,18 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void newMarker(Position position) {
+    mapController.move(new LatLng(position.latitude, position.longitude), 18);
+    markerLayerOptions.markers.add(new Marker(
+      width: 32.0,
+      height: 32.0,
+      point: new LatLng(position.latitude, position.longitude),
+      builder: (ctx) => new Container(
+        child: new Image.asset("assets/muensterhack_logo.png"),
+      ),
+    ));
   }
 
   Future<Position> _getPosition() async {
@@ -142,19 +157,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       print(position);
       setState(() {
         _tabController.index = 1;
-
         if (mapController.ready) {
-          Timer(
-              Duration(seconds: 1),
-              () => {
-                    mapController.move(
-                        new LatLng(position.latitude, position.longitude), 18)
-                  });
+          Timer(Duration(seconds: 1), () => newMarker(position));
         } else {
-          mapController.onReady.then((value) => {
-                mapController.move(
-                    new LatLng(position.latitude, position.longitude), 18)
-              });
+          mapController.onReady.then((value) => newMarker(position));
         }
       });
       return position;
@@ -166,7 +172,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
 
   Future<Response<Object>> _postCount(
       double long, double lat, int count) async {
-    String device_id = "mobileapp_" + randomString(10, from: 65, to: 90);
+    String device_id = "mobileapp";
     Response<Object> response = await api.dio.post("/devices/", data: {
       "lon": long,
       "lat": lat,
@@ -206,8 +212,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       timer = null;
       setState(() {
         _progress = 0.0;
-        _timerVisible = [false, false];
-        _imageOpacity = [1.0, 1.0];
+        _timerVisible = [false, false, false];
+        _imageOpacity = [1.0, 1.0, 1.0];
       });
     }
   }
@@ -225,7 +231,19 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         () {
           if (_progress >= 1) {
             _cancelTimer();
-            _finishTimer(idx);
+            int count;
+            switch (idx) {
+              case 2:
+                count = 50;
+                break;
+              case 1:
+                count = 10;
+                break;
+              case 0:
+              default:
+                count = 0;
+            }
+            _finishTimer(count);
           } else {
             _progress += 0.017;
             // print(_progress);
@@ -271,25 +289,24 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Padding(
-                          padding: EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+                          padding: EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 4.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text('Alles voll hier'),
+                              Text('Alles frei'),
                               SizedBox(height: 8.0),
                               Stack(
                                 children: [
                                   Opacity(
                                     opacity: _imageOpacity[0],
-                                    child: Image.asset(
-                                        "assets/crowded.png"), // image source: https://www.flickr.com/photos/markhodson/3388029136/in/photolist-6aox2s-2iF3Gah-MKniEo-2iF3GcM-ikB1iR-7CDfSw-EXBGuv-jmhfDh-tBLMLQ-LgV8nH-4HmJYy-5RT1nG-Qy85S8-HxWxK-2Zw4L5-dwpUWh-5RSXFq-9tF61e-252TJy8-S1VDPc-pRFDrJ-Q2V7CY-izFgK-4f2NfH-24B8GMK-EpJzjD-FRK5xb-awxFMa-JQ6AbV-GhdRVX-KJkFRj-iSpCJJ-dDPfHn-2gaNbiB-24MCmbw-DP5Gbq-2iNU6vS-2eUdyy5-fgCw56-25WuYjG-2hQQo2C-Qr4y57-s2BQP5-2jfcPVr-BD3ciR-6V3N8v-2iF3Gj5-CNSHFW-PBfF5L-DkQkvT
+                                    child: Image.asset("assets/background.png"),
                                   ),
                                   Visibility(
                                     visible: _timerVisible[0],
                                     child: Center(
-                                      heightFactor: 7.0,
+                                      heightFactor: 4.0,
                                       child: CircularProgressIndicator(
-                                        strokeWidth: 128,
+                                        strokeWidth: 64,
                                         backgroundColor: Colors.yellow,
                                         valueColor:
                                             new AlwaysStoppedAnimation<Color>(
@@ -315,25 +332,66 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Padding(
-                            padding: EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+                            padding: EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 4.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                Text('Alles OK'),
+                                Text('Abstände werden eingehalten'),
                                 SizedBox(height: 8.0),
                                 Stack(
                                   children: [
                                     Opacity(
                                       opacity: _imageOpacity[1],
-                                      child: Image.asset(
-                                          "assets/empty.png"), // image source: https://zh.wikipedia.org/zh/File:HKU_Station_Exit_B2_open_space_201412.jpg
+                                      child: Image.asset("assets/level1.png"),
                                     ),
                                     Visibility(
                                       visible: _timerVisible[1],
                                       child: Center(
-                                        heightFactor: 7.0,
+                                        heightFactor: 4.0,
                                         child: CircularProgressIndicator(
-                                          strokeWidth: 128,
+                                          strokeWidth: 64,
+                                          backgroundColor: Colors.yellow,
+                                          valueColor:
+                                              new AlwaysStoppedAnimation<Color>(
+                                                  Colors.red),
+                                          value: _progress,
+                                        ),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ))),
+              GestureDetector(
+                  onTapDown: (details) => {_startTimer(2)},
+                  onTapUp: (details) => {_cancelTimer()},
+                  child: Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 4.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text('Zu viele Menschen'),
+                                SizedBox(height: 8.0),
+                                Stack(
+                                  children: [
+                                    Opacity(
+                                      opacity: _imageOpacity[2],
+                                      child: Image.asset("assets/level2.png"),
+                                    ),
+                                    Visibility(
+                                      visible: _timerVisible[2],
+                                      child: Center(
+                                        heightFactor: 4.0,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 64,
                                           backgroundColor: Colors.yellow,
                                           valueColor:
                                               new AlwaysStoppedAnimation<Color>(
@@ -362,9 +420,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                   urlTemplate:
                       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                   subdomains: ['a', 'b', 'c']),
-              new MarkerLayerOptions(
-                markers: [],
-              ),
+              markerLayerOptions,
             ],
           ),
         ],

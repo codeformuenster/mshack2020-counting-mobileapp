@@ -52,8 +52,10 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/crowded.png # source:  https://www.flickr.com/photos/markhodson/3388029136/in/photolist-6aox2s-2iF3Gah-MKniEo-2iF3GcM-ikB1iR-7CDfSw-EXBGuv-jmhfDh-tBLMLQ-LgV8nH-4HmJYy-5RT1nG-Qy85S8-HxWxK-2Zw4L5-dwpUWh-5RSXFq-9tF61e-252TJy8-S1VDPc-pRFDrJ-Q2V7CY-izFgK-4f2NfH-24B8GMK-EpJzjD-FRK5xb-awxFMa-JQ6AbV-GhdRVX-KJkFRj-iSpCJJ-dDPfHn-2gaNbiB-24MCmbw-DP5Gbq-2iNU6vS-2eUdyy5-fgCw56-25WuYjG-2hQQo2C-Qr4y57-s2BQP5-2jfcPVr-BD3ciR-6V3N8v-2iF3Gj5-CNSHFW-PBfF5L-DkQkvT
-    - assets/empty.png # source: https://zh.wikipedia.org/zh/File:HKU_Station_Exit_B2_open_space_201412.jpg
+    - assets/muensterhack_logo.png
+    - assets/background.png # source: Background vector created by katemangostar - www.freepik.com
+    - assets/level1.png # sources: Background vector created by katemangostar, Infographic vector created by freepik - www.freepik.com
+    - assets/level2.png # sources: Background vector created by katemangostar, Infographic vector created by freepik - www.freepik.com
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
