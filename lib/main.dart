@@ -173,20 +173,21 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   Future<Response<Object>> _postCount(
       double long, double lat, int count) async {
     String device_id = "mobileapp";
-    Response<Object> response = await api.dio.post("/devices/", data: {
-      "lon": long,
-      "lat": lat,
-      "id": device_id,
-      "data": {"created_on": DateTime.now().toIso8601String()}
-    });
-    if (response.statusCode != 201) {
-      return response;
-    }
+    // Response<Object> response = await api.dio.post("/devices/", data: {
+    //   "lon": long,
+    //   "lat": lat,
+    //   "id": device_id,
+    //   "data": {"created_on": DateTime.now().toIso8601String()}
+    // });
+    // if (response.statusCode != 201) {
+    //   return response;
+    // }
 
-    response = await api.dio.post("/counts/", data: {
+    Response<Object> response = await api.dio.post("/counts/", data: {
       "device_id": device_id,
       "count": count,
-      "timestamp": DateTime.now().toIso8601String()
+      "timestamp": DateTime.now().toIso8601String(),
+      "data": {"longitude": long, "latitude": lat}
     });
     return response;
   }
