@@ -4,8 +4,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:muensterZaehltDartOpenapi/api.dart';
 import 'package:latlong/latlong.dart';
-import 'package:random_string/random_string.dart';
 import 'dart:async';
+import 'package:flutter_map_marker_popup/flutter_map_marker_popup.dart';
 
 /// Creates instance of [Dio] to be used in the remote layer of the app.
 Dio createDio(BaseOptions baseConfiguration) {
@@ -99,6 +99,59 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
+class Count {
+  static const double size = 32.0;
+
+  Count({this.name, this.count, this.lat, this.long, this.timestamp});
+
+  final String name;
+  final int count;
+  final double lat;
+  final double long;
+  final String timestamp;
+}
+
+class CountMarker extends Marker {
+  CountMarker({@required this.count})
+      : super(
+          anchorPos: AnchorPos.align(AnchorAlign.top),
+          height: Count.size,
+          width: Count.size,
+          point: LatLng(count.lat, count.long),
+          builder: (ctx) => new Container(
+            child: new Image.asset("assets/muensterhack_logo.png"),
+          ),
+        );
+
+  final Count count;
+}
+
+class CountMarkerPopup extends StatelessWidget {
+  const CountMarkerPopup({Key key, this.count}) : super(key: key);
+  final Count count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 200,
+      child: Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(count.name),
+            Text("Count: " + count.count.toString()),
+            Text('${count.lat}-${count.long}'),
+            Text(count.timestamp.substring(0, 16)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   List<double> _imageOpacity = [1.0, 1.0, 1.0];
   List<bool> _timerVisible = [false, false, false];
@@ -108,9 +161,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   MapController mapController = new MapController();
   AnimationController animationController;
   TabController _tabController;
-  MarkerLayerOptions markerLayerOptions = new MarkerLayerOptions(
-    markers: [],
-  );
+  PopupController _popupLayerController = PopupController();
+  PopupMarkerLayerOptions markerLayerOptions;
 
   @override
   void initState() {
@@ -120,6 +172,17 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       vsync: this,
     );
     _tabController = TabController(vsync: this, length: 2);
+
+    markerLayerOptions = new PopupMarkerLayerOptions(
+      markers: [],
+      popupController: _popupLayerController,
+      popupBuilder: (_, Marker marker) {
+        if (marker is CountMarker) {
+          return CountMarkerPopup(count: marker.count);
+        }
+        return Card(child: const Text('Not a count'));
+      },
+    );
 
     mapController.onReady.then((value) => initMarkers());
   }
@@ -146,30 +209,28 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                   count["data"]["longitude"] != null &&
                   count["data"]["longitude"] is double)
                 {
-                  markerLayerOptions.markers.add(new Marker(
-                    width: 32.0,
-                    height: 32.0,
-                    point: new LatLng(
-                        count["data"]["latitude"], count["data"]["longitude"]),
-                    builder: (ctx) => new Container(
-                      child: new Image.asset("assets/muensterhack_logo.png"),
-                    ),
-                  ))
+                  markerLayerOptions.markers.add(new CountMarker(
+                      count: Count(
+                          count: count["count"],
+                          lat: count["data"]["latitude"],
+                          long: count["data"]["longitude"],
+                          name: count["device_id"],
+                          timestamp: count["timestamp"])))
                 }
             }
         });
   }
 
-  void newMarker(Position position) {
-    mapController.move(new LatLng(position.latitude, position.longitude), 18);
-    markerLayerOptions.markers.add(new Marker(
-      width: 32.0,
-      height: 32.0,
-      point: new LatLng(position.latitude, position.longitude),
-      builder: (ctx) => new Container(
-        child: new Image.asset("assets/muensterhack_logo.png"),
-      ),
-    ));
+  void newMarker(
+      double lat, double lon, int count, String name, String timestamp) {
+    mapController.move(new LatLng(lat, lon), 18);
+    markerLayerOptions.markers.add(new CountMarker(
+        count: new Count(
+            count: count,
+            lat: lat,
+            long: lon,
+            name: name,
+            timestamp: timestamp)));
   }
 
   Future<Position> _getPosition() async {
@@ -187,14 +248,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       Position position =
           await getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       print(position);
-      setState(() {
-        _tabController.index = 1;
-        if (mapController.ready) {
-          Timer(Duration(seconds: 1), () => newMarker(position));
-        } else {
-          mapController.onReady.then((value) => newMarker(position));
-        }
-      });
       return position;
     } else {
       print("Location denied");
@@ -214,12 +267,23 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     // if (response.statusCode != 201) {
     //   return response;
     // }
-
+    String timestamp = DateTime.now().toIso8601String();
     Response<Object> response = await api.dio.post("/counts/", data: {
       "device_id": device_id,
       "count": count,
-      "timestamp": DateTime.now().toIso8601String(),
+      "timestamp": timestamp,
       "data": {"longitude": long, "latitude": lat}
+    });
+
+    setState(() {
+      _tabController.index = 1;
+      if (mapController.ready) {
+        Timer(Duration(seconds: 1),
+            () => newMarker(lat, long, count, device_id, timestamp));
+      } else {
+        mapController.onReady
+            .then((value) => newMarker(lat, long, count, device_id, timestamp));
+      }
     });
     return response;
   }
@@ -322,11 +386,13 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Padding(
-                          padding: EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 4.0),
+                          padding: EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 8.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text('Alles frei'),
+                              Center(
+                                child: Text('Alles frei'),
+                              ),
                               SizedBox(height: 8.0),
                               Stack(
                                 children: [
@@ -365,11 +431,12 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Padding(
-                            padding: EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 4.0),
+                            padding: EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 8.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                Text('Abstände werden eingehalten'),
+                                Center(
+                                    child: Text('Abstände werden eingehalten')),
                                 SizedBox(height: 8.0),
                                 Stack(
                                   children: [
@@ -407,11 +474,11 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Padding(
-                            padding: EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 4.0),
+                            padding: EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 8.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                Text('Zu viele Menschen'),
+                                Center(child: Text('Zu viele Menschen')),
                                 SizedBox(height: 8.0),
                                 Stack(
                                   children: [
@@ -444,6 +511,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
           ),
           FlutterMap(
             options: new MapOptions(
+              plugins: <MapPlugin>[PopupMarkerPlugin()],
               center: new LatLng(51.9521213, 7.6404818),
               zoom: 13.0,
             ),

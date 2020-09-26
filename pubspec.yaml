@@ -29,6 +29,7 @@ dependencies:
     git: https://github.com/codeformuenster/mshack2020-counting-dart-openapi.git
   flutter_map: any
   random_string: any
+  flutter_map_marker_popup: any
 
 
   # The following adds the Cupertino Icons font to your application.
