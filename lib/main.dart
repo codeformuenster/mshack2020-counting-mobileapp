@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:muensterZaehltDartOpenapi/api.dart';
 import 'package:latlong/latlong.dart';
+import 'package:random_string/random_string.dart';
 
 /// Creates instance of [Dio] to be used in the remote layer of the app.
 Dio createDio(BaseOptions baseConfiguration) {
@@ -101,6 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int _fullcounter = 0;
   int _emptycounter = 0;
   MuensterZaehltDartOpenapi api = createMyApi();
+  MapController mapController = new MapController();
 
   void _incrementFullCounter() {
     setState(() {
@@ -137,12 +139,23 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<Response<Object>> _postCount(
       double long, double lat, int count) async {
-    Response<Object> response = await api.dio.post("/counts/", data: {
-      "long": long,
+    String device_id = "mobileapp_" + randomString(10, from: 65, to: 90);
+    Response<Object> response = await api.dio.post("/devices/", data: {
+      "lon": long,
       "lat": lat,
+      "id": device_id,
+      "data": {"created_on": DateTime.now().toIso8601String()}
+    });
+    if (response.statusCode != 201) {
+      return response;
+    }
+
+    response = await api.dio.post("/counts/", data: {
+      "device_id": device_id,
       "count": count,
       "timestamp": DateTime.now().toIso8601String()
     });
+    // mapController.move(LatLng(lat, long), 17);
     return response;
   }
 
@@ -188,9 +201,8 @@ class _MyHomePageState extends State<MyHomePage> {
             physics: NeverScrollableScrollPhysics(),
             children: [
               GridView.count(
-                crossAxisCount: 2,
-                padding: EdgeInsets.all(16.0),
-                childAspectRatio: 8.0 / 9.0,
+                crossAxisCount: 1,
+                padding: EdgeInsets.only(left: 8.0, right: 8.0, top: 8.0),
                 children: <Widget>[
                   GestureDetector(
                     onTap: () {
@@ -220,10 +232,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                   Center(
                                       child: Column(
                                     children: [
-                                      Text(
-                                        '💩',
-                                        style: TextStyle(fontSize: 82),
-                                      ),
+                                      Image.asset(
+                                          "assets/crowded.png"), // image source: https://www.flickr.com/photos/markhodson/3388029136/in/photolist-6aox2s-2iF3Gah-MKniEo-2iF3GcM-ikB1iR-7CDfSw-EXBGuv-jmhfDh-tBLMLQ-LgV8nH-4HmJYy-5RT1nG-Qy85S8-HxWxK-2Zw4L5-dwpUWh-5RSXFq-9tF61e-252TJy8-S1VDPc-pRFDrJ-Q2V7CY-izFgK-4f2NfH-24B8GMK-EpJzjD-FRK5xb-awxFMa-JQ6AbV-GhdRVX-KJkFRj-iSpCJJ-dDPfHn-2gaNbiB-24MCmbw-DP5Gbq-2iNU6vS-2eUdyy5-fgCw56-25WuYjG-2hQQo2C-Qr4y57-s2BQP5-2jfcPVr-BD3ciR-6V3N8v-2iF3Gj5-CNSHFW-PBfF5L-DkQkvT
                                       Text("Vollzähler"),
                                       Text(
                                         '$_fullcounter',
@@ -264,10 +274,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                     Center(
                                         child: Column(
                                       children: [
-                                        Text(
-                                          '😎',
-                                          style: TextStyle(fontSize: 82),
-                                        ),
+                                        Image.asset(
+                                            "assets/empty.png"), // source: https://zh.wikipedia.org/zh/File:HKU_Station_Exit_B2_open_space_201412.jpg
                                         Text("Leerzähler"),
                                         Text(
                                           '$_emptycounter',
@@ -286,6 +294,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   center: new LatLng(51.9521213, 7.6404818),
                   zoom: 13.0,
                 ),
+                mapController: mapController,
                 layers: [
                   new TileLayerOptions(
                       urlTemplate:
