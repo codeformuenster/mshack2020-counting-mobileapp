@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:muensterZaehltDartOpenapi/api.dart';
 import 'package:latlong/latlong.dart';
 import 'package:random_string/random_string.dart';
+import 'dart:async';
 
 /// Creates instance of [Dio] to be used in the remote layer of the app.
 Dio createDio(BaseOptions baseConfiguration) {
@@ -98,21 +99,23 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _fullcounter = 0;
-  int _emptycounter = 0;
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
+  List<double> _imageOpacity = [1.0, 1.0];
+  List<bool> _timerVisible = [false, false];
+  double _progress = 0;
+  Timer timer;
   MuensterZaehltDartOpenapi api = createMyApi();
   MapController mapController = new MapController();
+  AnimationController animationController;
 
-  void _incrementFullCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _fullcounter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+    animationController = AnimationController(
+      duration: Duration(seconds: 1),
+      vsync: this,
+    );
   }
 
   Future<Position> _getPosition() async {
@@ -164,15 +167,49 @@ class _MyHomePageState extends State<MyHomePage> {
     return response;
   }
 
-  void _incrementEmptyCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _emptycounter++;
+  void _finishTimer(int count) {
+    _getPosition()
+        .then((value) => _postCount(value.longitude, value.latitude, count)
+            .then((value) => print(value.data)))
+        .catchError((e) {
+      print("Got error: ${e.error}");
+      return 1;
     });
+  }
+
+  void _cancelTimer() {
+    if (timer != null) {
+      timer.cancel();
+      timer = null;
+      setState(() {
+        _progress = 0.0;
+        _timerVisible = [false, false];
+        _imageOpacity = [1.0, 1.0];
+      });
+    }
+  }
+
+  void _startTimer(int idx) {
+    print("Start timer");
+    setState(() {
+      _progress = 0.0;
+      _timerVisible[idx] = true;
+      _imageOpacity[idx] = 0.5;
+    });
+    timer = new Timer.periodic(
+      Duration(milliseconds: 17),
+      (Timer timer) => setState(
+        () {
+          if (_progress >= 1) {
+            _cancelTimer();
+            _finishTimer(idx);
+          } else {
+            _progress += 0.017;
+            // print(_progress);
+          }
+        },
+      ),
+    );
   }
 
   @override
@@ -205,17 +242,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 padding: EdgeInsets.only(left: 8.0, right: 8.0, top: 8.0),
                 children: <Widget>[
                   GestureDetector(
-                    onTap: () {
-                      _incrementFullCounter();
-                      _getPosition()
-                          .then((value) =>
-                              _postCount(value.longitude, value.latitude, 1)
-                                  .then((value) => print(value.data)))
-                          .catchError((e) {
-                        print("Got error: ${e.error}");
-                        return 1;
-                      });
-                    },
+                    onTapDown: (details) => {_startTimer(0)},
+                    onTapUp: (details) => {_cancelTimer()},
                     child: Card(
                         clipBehavior: Clip.antiAlias,
                         child: Column(
@@ -229,17 +257,29 @@ class _MyHomePageState extends State<MyHomePage> {
                                 children: <Widget>[
                                   Text('Alles voll hier'),
                                   SizedBox(height: 8.0),
-                                  Center(
-                                      child: Column(
+                                  Stack(
                                     children: [
-                                      Image.asset(
-                                          "assets/crowded.png"), // image source: https://www.flickr.com/photos/markhodson/3388029136/in/photolist-6aox2s-2iF3Gah-MKniEo-2iF3GcM-ikB1iR-7CDfSw-EXBGuv-jmhfDh-tBLMLQ-LgV8nH-4HmJYy-5RT1nG-Qy85S8-HxWxK-2Zw4L5-dwpUWh-5RSXFq-9tF61e-252TJy8-S1VDPc-pRFDrJ-Q2V7CY-izFgK-4f2NfH-24B8GMK-EpJzjD-FRK5xb-awxFMa-JQ6AbV-GhdRVX-KJkFRj-iSpCJJ-dDPfHn-2gaNbiB-24MCmbw-DP5Gbq-2iNU6vS-2eUdyy5-fgCw56-25WuYjG-2hQQo2C-Qr4y57-s2BQP5-2jfcPVr-BD3ciR-6V3N8v-2iF3Gj5-CNSHFW-PBfF5L-DkQkvT
-                                      Text("Vollzähler"),
-                                      Text(
-                                        '$_fullcounter',
+                                      Opacity(
+                                        opacity: _imageOpacity[0],
+                                        child: Image.asset(
+                                            "assets/crowded.png"), // image source: https://www.flickr.com/photos/markhodson/3388029136/in/photolist-6aox2s-2iF3Gah-MKniEo-2iF3GcM-ikB1iR-7CDfSw-EXBGuv-jmhfDh-tBLMLQ-LgV8nH-4HmJYy-5RT1nG-Qy85S8-HxWxK-2Zw4L5-dwpUWh-5RSXFq-9tF61e-252TJy8-S1VDPc-pRFDrJ-Q2V7CY-izFgK-4f2NfH-24B8GMK-EpJzjD-FRK5xb-awxFMa-JQ6AbV-GhdRVX-KJkFRj-iSpCJJ-dDPfHn-2gaNbiB-24MCmbw-DP5Gbq-2iNU6vS-2eUdyy5-fgCw56-25WuYjG-2hQQo2C-Qr4y57-s2BQP5-2jfcPVr-BD3ciR-6V3N8v-2iF3Gj5-CNSHFW-PBfF5L-DkQkvT
                                       ),
+                                      Visibility(
+                                        visible: _timerVisible[0],
+                                        child: Center(
+                                          heightFactor: 7.0,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 128,
+                                            backgroundColor: Colors.yellow,
+                                            valueColor:
+                                                new AlwaysStoppedAnimation<
+                                                    Color>(Colors.red),
+                                            value: _progress,
+                                          ),
+                                        ),
+                                      )
                                     ],
-                                  )),
+                                  ),
                                 ],
                               ),
                             ),
@@ -247,17 +287,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         )),
                   ),
                   GestureDetector(
-                      onTap: () {
-                        _incrementEmptyCounter();
-                        _getPosition()
-                            .then((value) =>
-                                _postCount(value.longitude, value.latitude, 0)
-                                    .then((value) => print(value.data)))
-                            .catchError((e) {
-                          print("Got error: ${e.error}");
-                          return 1;
-                        });
-                      },
+                      onTapDown: (details) => {_startTimer(1)},
+                      onTapUp: (details) => {_cancelTimer()},
                       child: Card(
                           clipBehavior: Clip.antiAlias,
                           child: Column(
@@ -271,17 +302,29 @@ class _MyHomePageState extends State<MyHomePage> {
                                   children: <Widget>[
                                     Text('Alles OK'),
                                     SizedBox(height: 8.0),
-                                    Center(
-                                        child: Column(
+                                    Stack(
                                       children: [
-                                        Image.asset(
-                                            "assets/empty.png"), // source: https://zh.wikipedia.org/zh/File:HKU_Station_Exit_B2_open_space_201412.jpg
-                                        Text("Leerzähler"),
-                                        Text(
-                                          '$_emptycounter',
+                                        Opacity(
+                                          opacity: _imageOpacity[1],
+                                          child: Image.asset(
+                                              "assets/empty.png"), // image source: https://zh.wikipedia.org/zh/File:HKU_Station_Exit_B2_open_space_201412.jpg
                                         ),
+                                        Visibility(
+                                          visible: _timerVisible[1],
+                                          child: Center(
+                                            heightFactor: 7.0,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 128,
+                                              backgroundColor: Colors.yellow,
+                                              valueColor:
+                                                  new AlwaysStoppedAnimation<
+                                                      Color>(Colors.red),
+                                              value: _progress,
+                                            ),
+                                          ),
+                                        )
                                       ],
-                                    )),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -307,11 +350,6 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ],
           ),
-          // floatingActionButton: FloatingActionButton(
-          //   onPressed: _incrementFullCounter,
-          //   tooltip: 'Increment',
-          //   child: Icon(Icons.add),
-          // ),
         ));
   }
 }
