@@ -237,9 +237,7 @@ class _MyHomePageState extends State<MyHomePage>
           body: TabBarView(
             physics: NeverScrollableScrollPhysics(),
             children: [
-              GridView.count(
-                crossAxisCount: 1,
-                padding: EdgeInsets.only(left: 8.0, right: 8.0, top: 8.0),
+              Column(
                 children: <Widget>[
                   GestureDetector(
                     onTapDown: (details) => {_startTimer(0)},
