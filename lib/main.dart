@@ -99,8 +99,7 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage>
-    with SingleTickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   List<double> _imageOpacity = [1.0, 1.0];
   List<bool> _timerVisible = [false, false];
   double _progress = 0;
@@ -108,6 +107,7 @@ class _MyHomePageState extends State<MyHomePage>
   MuensterZaehltDartOpenapi api = createMyApi();
   MapController mapController = new MapController();
   AnimationController animationController;
+  TabController _tabController;
 
   @override
   void initState() {
@@ -116,6 +116,13 @@ class _MyHomePageState extends State<MyHomePage>
       duration: Duration(seconds: 1),
       vsync: this,
     );
+    _tabController = TabController(vsync: this, length: 2);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<Position> _getPosition() async {
@@ -133,6 +140,23 @@ class _MyHomePageState extends State<MyHomePage>
       Position position =
           await getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       print(position);
+      setState(() {
+        _tabController.index = 1;
+
+        if (mapController.ready) {
+          Timer(
+              Duration(seconds: 1),
+              () => {
+                    mapController.move(
+                        new LatLng(position.latitude, position.longitude), 18)
+                  });
+        } else {
+          mapController.onReady.then((value) => {
+                mapController.move(
+                    new LatLng(position.latitude, position.longitude), 18)
+              });
+        }
+      });
       return position;
     } else {
       print("Location denied");
@@ -158,7 +182,6 @@ class _MyHomePageState extends State<MyHomePage>
       "count": count,
       "timestamp": DateTime.now().toIso8601String()
     });
-    // mapController.move(LatLng(lat, long), 17);
     return response;
   }
 
@@ -220,134 +243,132 @@ class _MyHomePageState extends State<MyHomePage>
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
-    return DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          appBar: AppBar(
-            // Here we take the value from the MyHomePage object that was created by
-            // the App.build method, and use it to set our appbar title.
-            title: Text(widget.title),
-            bottom: TabBar(
-              tabs: [
-                Tab(icon: Icon(Icons.add_to_photos)),
-                Tab(icon: Icon(Icons.map)),
-              ],
-            ),
-          ),
-          body: TabBarView(
-            physics: NeverScrollableScrollPhysics(),
-            children: [
-              Column(
-                children: <Widget>[
-                  GestureDetector(
-                    onTapDown: (details) => {_startTimer(0)},
-                    onTapUp: (details) => {_cancelTimer()},
-                    child: Card(
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Padding(
-                              padding:
-                                  EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text('Alles voll hier'),
-                                  SizedBox(height: 8.0),
-                                  Stack(
-                                    children: [
-                                      Opacity(
-                                        opacity: _imageOpacity[0],
-                                        child: Image.asset(
-                                            "assets/crowded.png"), // image source: https://www.flickr.com/photos/markhodson/3388029136/in/photolist-6aox2s-2iF3Gah-MKniEo-2iF3GcM-ikB1iR-7CDfSw-EXBGuv-jmhfDh-tBLMLQ-LgV8nH-4HmJYy-5RT1nG-Qy85S8-HxWxK-2Zw4L5-dwpUWh-5RSXFq-9tF61e-252TJy8-S1VDPc-pRFDrJ-Q2V7CY-izFgK-4f2NfH-24B8GMK-EpJzjD-FRK5xb-awxFMa-JQ6AbV-GhdRVX-KJkFRj-iSpCJJ-dDPfHn-2gaNbiB-24MCmbw-DP5Gbq-2iNU6vS-2eUdyy5-fgCw56-25WuYjG-2hQQo2C-Qr4y57-s2BQP5-2jfcPVr-BD3ciR-6V3N8v-2iF3Gj5-CNSHFW-PBfF5L-DkQkvT
-                                      ),
-                                      Visibility(
-                                        visible: _timerVisible[0],
-                                        child: Center(
-                                          heightFactor: 7.0,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 128,
-                                            backgroundColor: Colors.yellow,
-                                            valueColor:
-                                                new AlwaysStoppedAnimation<
-                                                    Color>(Colors.red),
-                                            value: _progress,
-                                          ),
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        )),
-                  ),
-                  GestureDetector(
-                      onTapDown: (details) => {_startTimer(1)},
-                      onTapUp: (details) => {_cancelTimer()},
-                      child: Card(
-                          clipBehavior: Clip.antiAlias,
+    return Scaffold(
+      appBar: AppBar(
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(widget.title),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(icon: Icon(Icons.add_to_photos)),
+            Tab(icon: Icon(Icons.map)),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        physics: NeverScrollableScrollPhysics(),
+        children: [
+          Column(
+            children: <Widget>[
+              GestureDetector(
+                onTapDown: (details) => {_startTimer(0)},
+                onTapUp: (details) => {_cancelTimer()},
+                child: Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Padding(
-                                padding:
-                                    EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Text('Alles OK'),
-                                    SizedBox(height: 8.0),
-                                    Stack(
-                                      children: [
-                                        Opacity(
-                                          opacity: _imageOpacity[1],
-                                          child: Image.asset(
-                                              "assets/empty.png"), // image source: https://zh.wikipedia.org/zh/File:HKU_Station_Exit_B2_open_space_201412.jpg
-                                        ),
-                                        Visibility(
-                                          visible: _timerVisible[1],
-                                          child: Center(
-                                            heightFactor: 7.0,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 128,
-                                              backgroundColor: Colors.yellow,
-                                              valueColor:
-                                                  new AlwaysStoppedAnimation<
-                                                      Color>(Colors.red),
-                                              value: _progress,
-                                            ),
-                                          ),
-                                        )
-                                      ],
+                              Text('Alles voll hier'),
+                              SizedBox(height: 8.0),
+                              Stack(
+                                children: [
+                                  Opacity(
+                                    opacity: _imageOpacity[0],
+                                    child: Image.asset(
+                                        "assets/crowded.png"), // image source: https://www.flickr.com/photos/markhodson/3388029136/in/photolist-6aox2s-2iF3Gah-MKniEo-2iF3GcM-ikB1iR-7CDfSw-EXBGuv-jmhfDh-tBLMLQ-LgV8nH-4HmJYy-5RT1nG-Qy85S8-HxWxK-2Zw4L5-dwpUWh-5RSXFq-9tF61e-252TJy8-S1VDPc-pRFDrJ-Q2V7CY-izFgK-4f2NfH-24B8GMK-EpJzjD-FRK5xb-awxFMa-JQ6AbV-GhdRVX-KJkFRj-iSpCJJ-dDPfHn-2gaNbiB-24MCmbw-DP5Gbq-2iNU6vS-2eUdyy5-fgCw56-25WuYjG-2hQQo2C-Qr4y57-s2BQP5-2jfcPVr-BD3ciR-6V3N8v-2iF3Gj5-CNSHFW-PBfF5L-DkQkvT
+                                  ),
+                                  Visibility(
+                                    visible: _timerVisible[0],
+                                    child: Center(
+                                      heightFactor: 7.0,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 128,
+                                        backgroundColor: Colors.yellow,
+                                        valueColor:
+                                            new AlwaysStoppedAnimation<Color>(
+                                                Colors.red),
+                                        value: _progress,
+                                      ),
                                     ),
-                                  ],
-                                ),
+                                  )
+                                ],
                               ),
                             ],
-                          ))),
-                ],
+                          ),
+                        ),
+                      ],
+                    )),
               ),
-              FlutterMap(
-                options: new MapOptions(
-                  center: new LatLng(51.9521213, 7.6404818),
-                  zoom: 13.0,
-                ),
-                mapController: mapController,
-                layers: [
-                  new TileLayerOptions(
-                      urlTemplate:
-                          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                      subdomains: ['a', 'b', 'c']),
-                  new MarkerLayerOptions(
-                    markers: [],
-                  ),
-                ],
+              GestureDetector(
+                  onTapDown: (details) => {_startTimer(1)},
+                  onTapUp: (details) => {_cancelTimer()},
+                  child: Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text('Alles OK'),
+                                SizedBox(height: 8.0),
+                                Stack(
+                                  children: [
+                                    Opacity(
+                                      opacity: _imageOpacity[1],
+                                      child: Image.asset(
+                                          "assets/empty.png"), // image source: https://zh.wikipedia.org/zh/File:HKU_Station_Exit_B2_open_space_201412.jpg
+                                    ),
+                                    Visibility(
+                                      visible: _timerVisible[1],
+                                      child: Center(
+                                        heightFactor: 7.0,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 128,
+                                          backgroundColor: Colors.yellow,
+                                          valueColor:
+                                              new AlwaysStoppedAnimation<Color>(
+                                                  Colors.red),
+                                          value: _progress,
+                                        ),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ))),
+            ],
+          ),
+          FlutterMap(
+            options: new MapOptions(
+              center: new LatLng(51.9521213, 7.6404818),
+              zoom: 13.0,
+            ),
+            mapController: mapController,
+            layers: [
+              new TileLayerOptions(
+                  urlTemplate:
+                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  subdomains: ['a', 'b', 'c']),
+              new MarkerLayerOptions(
+                markers: [],
               ),
             ],
           ),
-        ));
+        ],
+      ),
+    );
   }
 }
